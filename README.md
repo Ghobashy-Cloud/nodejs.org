@@ -204,7 +204,8 @@ pipeline {
    ```
 
 4. **Access the Node.js application**:
-   Find the Minikube IP and access the app on `http://<minikube-ip>:30080`.
+   ![10](https://github.com/user-attachments/assets/d86a00a4-ef1c-486f-9c1f-6eb88d52a3a6)
+
 
 ## Conclusion
 
