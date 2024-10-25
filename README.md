@@ -205,6 +205,30 @@ pipeline {
 
 4. **Access the Node.js application**:
    ![10](https://github.com/user-attachments/assets/d86a00a4-ef1c-486f-9c1f-6eb88d52a3a6)
+screenshots
+Argocd coustmize
+![1](https://github.com/user-attachments/assets/1d7579d9-f072-48d3-a4f7-ba35b96a5215)
+Fetch
+![2](https://github.com/user-attachments/assets/15f73f33-5ec2-467e-93fd-8d6dfd5dfe61)
+
+Install npm
+![3](https://github.com/user-attachments/assets/a60e940b-47ab-476b-b5e6-55ff80ddedb2)
+![4](https://github.com/user-attachments/assets/f1c77d05-b82a-4609-9f63-84d802522fe9)
+
+Run Unit testing
+![5](https://github.com/user-attachments/assets/26c62c8c-d16e-458d-9333-2a23d5bfedca)
+
+Dockerize
+![6](https://github.com/user-attachments/assets/a5aafdad-9373-4d8e-82a6-c35f8fe25b85)
+![7](https://github.com/user-attachments/assets/895f9cb9-e5db-419b-ae54-90a7467bc36f)
+
+Push Docker Image
+![8](https://github.com/user-attachments/assets/2221f142-a9e9-44c4-b289-0c218b9ffae5)
+
+![9](https://github.com/user-attachments/assets/845c5607-526b-4190-8357-5b879ccdb601)
+
+
+
 
 
 ## Conclusion
