@@ -1,178 +1,213 @@
-Node.js Application Deployment to Kubernetes with ArgoCD and Jenkins
-Overview
-This project demonstrates the deployment of a Node.js application from the official Node.js GitHub repository to a local Kubernetes cluster using ArgoCD for continuous delivery. The entire process is fully automated through a Jenkins pipeline, which handles building, testing, Dockerizing, and pushing the application to Docker Hub.
 
-Project Structure
-Jenkins: Automates the CI/CD pipeline for building and deploying the Node.js application.
-Docker: Containerizes the Node.js application.
-Minikube: Hosts the local Kubernetes cluster.
-ArgoCD: Manages continuous delivery for the Kubernetes cluster.
-Prerequisites
-Before starting, ensure the following setup:
+# Node.js Application Kubernetes Deployment
 
-Virtual Machine 1 (Jenkins)
-Jenkins installed.
-Docker installed.
-Virtual Machine 2 (Minikube and ArgoCD)
-Minikube installed.
-kubectl installed.
-ArgoCD installed.
-Accounts
-GitHub Account: Ghobashy-Cloud
-Docker Hub Account: khaled55
-Part 1: Jenkins Setup and Dockerization
-Step 1: Fork the Repository
-Navigate to the Node.js GitHub repository.
-Click the "Fork" button to create a copy of the repository in Khaled's GitHub account.
-Step 2: Clone the Repository
-Clone the forked repository to the Jenkins VM:
+## Overview
 
-bash
-Copy code
-git clone https://github.com/Ghobashy-Cloud/nodejs.org.git
-Step 3: Build and Run Unit Tests Locally
-Ensure that Node.js is installed on the VM. Install Node.js version 20 or higher:
+This project demonstrates the deployment of a Node.js application from the Node.js GitHub repository to a local Kubernetes cluster. The deployment uses **ArgoCD** for continuous delivery. Additionally, a **Jenkins** pipeline is set up to automate the build and deployment process, including Dockerization and testing.
 
-bash
-Copy code
-nvm install 20
-nvm use 20
-To build and test the application locally:
+## Prerequisites
 
-bash
-Copy code
-npm install
-npm test
-Step 4: Create and Push the Dockerfile
-Create a Dockerfile for the Node.js application:
+Before proceeding, ensure you have the following setup:
 
-dockerfile
-Copy code
-# Use Node.js official image
-FROM node:20
+- **Two Virtual Machines (VMs)**
+  - One VM for **Jenkins** with **Docker** installed.
+  - One VM for **Minikube** and **kubectl**.
+- **Minikube** installed on the second VM.
+- **ArgoCD** installed and configured on Minikube.
+- **GitHub account** to fork and store the repository.
+- **Docker Hub account** for storing the Docker image.
 
-# Set the working directory
-WORKDIR /usr/src/app
+## Part 1: Jenkins Setup and Dockerization
 
-# Copy package.json and install dependencies
-COPY package*.json ./
-RUN npm install
+### Step 1: Fork the Repository
 
-# Copy the application code
-COPY . .
+1. Go to the Node.js GitHub repository: [https://github.com/nodejs/nodejs.org.git](https://github.com/nodejs/nodejs.org.git)
+2. Click on the "Fork" button in the upper-right corner to create a copy of the repository in your GitHub account.
 
-# Expose the application port
-EXPOSE 8000
+### Step 2: Clone the Repository on Your VM
 
-# Command to start the application
-CMD ["npm", "start"]
-Push this Dockerfile to Khaled's GitHub repository.
+On the VM where Jenkins is installed, clone the forked repository:
+```bash
+git clone git@github.com:<your-github-username>/nodejs.org.git
+```
 
-Step 5: Set Up Jenkins Pipeline
-Configure a multibranch pipeline in Jenkins to automate the following stages:
+### Step 3: Build the Application and Run Unit Tests Locally
 
-Checkout the repository: Pull the latest code from GitHub.
-Install dependencies: Use npm to install required packages.
-Run unit tests: Execute npm test to ensure the code passes all tests.
-Dockerize the application: Build the Docker image using the Dockerfile.
-Push Docker image: Push the Docker image to Khaled's Docker Hub account (khaled55/nodejs-app).
-Sample Jenkinsfile Structure:
-groovy
-Copy code
+1. Ensure your VM has **Node.js** installed (version 18 is required). If not, install it:
+   ```bash
+   sudo apt update
+   sudo apt install -y nodejs npm
+   nvm install 18
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd nodejs.org
+   ```
+3. Install the dependencies:
+   ```bash
+   npm install
+   ```
+4. Run the unit tests to ensure the application is working:
+   ```bash
+   npm test
+   ```
+
+### Step 4: Create a Dockerfile and Push it to GitHub
+
+1. Create a `Dockerfile` in the root of your project directory. Here's an example Dockerfile:
+   ```dockerfile
+   FROM node:18-alpine
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm install
+   COPY . .
+   EXPOSE 3000
+   CMD ["npm", "start"]
+   ```
+2. Commit the `Dockerfile` to your repository:
+   ```bash
+   git add Dockerfile
+   git commit -m "Add Dockerfile"
+   git push origin main
+   ```
+
+### Step 5: Set Up Jenkins Pipeline
+
+You will now configure Jenkins to automate the build and deployment process. The pipeline will:
+
+1. **Fetch the code** from the GitHub repository.
+2. **Install dependencies**.
+3. **Run unit tests**.
+4. **Dockerize the application**.
+5. **Push the Docker image to Docker Hub**.
+
+Here is a basic structure of the Jenkins pipeline (`Jenkinsfile`):
+
+```groovy
 pipeline {
     agent any
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git 'https://github.com/Ghobashy-Cloud/nodejs.org.git'
+                git 'git@github.com:<your-github-username>/nodejs.org.git'
             }
         }
+
         stage('Install Dependencies') {
             steps {
                 sh 'npm install'
             }
         }
+
         stage('Run Unit Tests') {
             steps {
                 sh 'npm test'
             }
         }
+
         stage('Dockerize') {
             steps {
-                sh 'docker build -t khaled55/nodejs-app .'
+                script {
+                    docker.build('khaled55/nodejs-app')
+                }
             }
         }
+
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh 'docker push khaled55/nodejs-app'
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                        docker.image('khaled55/nodejs-app').push('latest')
+                    }
                 }
             }
         }
     }
 }
-Part 2: Kubernetes Deployment
-Step 1: Set Up Minikube and ArgoCD
-On the second VM:
+```
+- Replace `<your-github-username>` with your actual GitHub username.
+- Replace `'docker-hub-credentials'` with the Jenkins credential ID for Docker Hub.
 
-Install Minikube.
-Install kubectl.
-Install ArgoCD.
-Step 2: Create Kubernetes Deployment YAML
-Create a deployment.yaml file for the Node.js application and push it to Khaled's GitHub repository:
+## Part 2: Kubernetes Deployment
 
-yaml
-Copy code
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nodejs-app
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: nodejs-app
-  template:
-    metadata:
-      labels:
-        app: nodejs-app
-    spec:
-      containers:
-      - name: nodejs-app
-        image: khaled55/nodejs-app:latest
-        ports:
-        - containerPort: 8000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nodejs-app-service
-spec:
-  type: NodePort
-  ports:
-    - port: 8000
-      nodePort: 30007
-  selector:
-    app: nodejs-app
-    
-Step 3: Deploy with ArgoCD
-Add Khaled's GitHub repository as a Git source in ArgoCD.
-Create an ArgoCD application to manage the Node.js deployment.
-Sync ArgoCD to deploy the application to the Minikube cluster.
-Step 4: Verify the Deployment
-After deploying with ArgoCD, ensure that the application is running successfully:
+### Step 1: Setup Minikube and ArgoCD
 
-Get the list of pods to check their status:
-bash
-Copy code
-kubectl get pods
-Access the application via the Minikube IP and the NodePort:
-Retrieve the Minikube IP:
-bash
-Copy code
-minikube ip
-Open a web browser and navigate to http://<MINIKUBE_IP>:30007. Khaled should see the Node.js application running.
-Conclusion
-This project illustrates a complete CI/CD pipeline for a Node.js application, encompassing building, testing, containerization, and deployment using Kubernetes and ArgoCD. The Jenkins pipeline automates these processes, ensuring that every new code change is tested, Dockerized, and deployed without manual intervention.
+1. **Install Minikube** on the second VM:
+   ```bash
+   curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+   sudo install minikube-linux-amd64 /usr/local/bin/minikube
+   ```
+   Start Minikube:
+   ```bash
+   minikube start
+   ```
+
+2. **Install kubectl**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y apt-transport-https
+   sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+   sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+   sudo apt-get install -y kubectl
+   ```
+
+3. **Install ArgoCD**:
+   - Install ArgoCD on Minikube following [ArgoCD official instructions](https://argo-cd.readthedocs.io/en/stable/getting_started/).
+
+### Step 2: Deploy the Node.js App to Kubernetes
+
+1. **Create a Kubernetes Deployment YAML** file (`deployment.yaml`):
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: nodejs-app
+   spec:
+     replicas: 2
+     selector:
+       matchLabels:
+         app: nodejs-app
+     template:
+       metadata:
+         labels:
+           app: nodejs-app
+       spec:
+         containers:
+         - name: nodejs-app
+           image: khaled55/nodejs-app:latest
+           ports:
+           - containerPort: 3000
+   ---
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: nodejs-app-service
+   spec:
+     type: NodePort
+     selector:
+       app: nodejs-app
+     ports:
+     - protocol: TCP
+       port: 80
+       targetPort: 3000
+       nodePort: 30080
+   ```
+
+2. **Apply the Kubernetes configuration** to deploy the app:
+   ```bash
+   kubectl apply -f deployment.yaml
+   ```
+
+3. **Monitor the deployment** to ensure it’s running:
+   ```bash
+   kubectl get pods
+   ```
+
+4. **Access the Node.js application**:
+   Find the Minikube IP and access the app on `http://<minikube-ip>:30080`.
+
+## Conclusion
+
+This project demonstrates a full CI/CD pipeline for a Node.js application using Jenkins, Docker, Minikube, and ArgoCD. It automates the build, test, and deployment processes, allowing seamless integration and continuous delivery of the application.
+
