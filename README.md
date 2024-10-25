@@ -28,7 +28,7 @@ Before proceeding, ensure you have the following setup:
 
 On the VM where Jenkins is installed, clone the forked repository:
 ```bash
-git clone git@github.com:<your-github-username>/nodejs.org.git
+git clone git@github.com:<Ghobashy-Cloud>/nodejs.org.git
 ```
 
 ### Step 3: Build the Application and Run Unit Tests Locally
@@ -90,7 +90,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'git@github.com:<your-github-username>/nodejs.org.git'
+                git 'git@github.com:<Ghobashy-Cloud>/nodejs.org.git'
             }
         }
 
@@ -126,8 +126,7 @@ pipeline {
     }
 }
 ```
-- Replace `<your-github-username>` with your actual GitHub username.
-- Replace `'docker-hub-credentials'` with the Jenkins credential ID for Docker Hub.
+
 
 ## Part 2: Kubernetes Deployment
 
