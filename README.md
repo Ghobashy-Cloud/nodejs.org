@@ -1,125 +1,178 @@
-<p align="center">
-  <br />
-  <a href="https://nodejs.org">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://nodejs.org/static/logos/nodejsLight.svg">
-      <img src="https://nodejs.org/static/logos/nodejsDark.svg" width="200px">
-    </picture>
-  </a>
-</p>
+Node.js Application Deployment to Kubernetes with ArgoCD and Jenkins
+Overview
+This project demonstrates the deployment of a Node.js application from the official Node.js GitHub repository to a local Kubernetes cluster using ArgoCD for continuous delivery. The entire process is fully automated through a Jenkins pipeline, which handles building, testing, Dockerizing, and pushing the application to Docker Hub.
 
-<p align="center">
-  <a href="https://nodejs.org">Node.js</a> Website built using Next.js with TypeScript, CSS Modules/Tailwind, and MDXv3
-</p>
+Project Structure
+Jenkins: Automates the CI/CD pipeline for building and deploying the Node.js application.
+Docker: Containerizes the Node.js application.
+Minikube: Hosts the local Kubernetes cluster.
+ArgoCD: Manages continuous delivery for the Kubernetes cluster.
+Prerequisites
+Before starting, ensure the following setup:
 
-<p align="center">
-  <a title="MIT License" href="LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License" />
-  </a>
-  <a title="Localised" href="https://crowdin.com/project/nodejs-web">
-    <img src="https://badges.crowdin.net/nodejs-web/localized.svg" alt="Crowdin Badge" />
-  </a>
-  <a title="Vercel" href="https://vercel.com">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/powered%20by-Vercel%20%E2%96%B2-white">
-      <img src="https://img.shields.io/badge/powered%20by-Vercel%20%E2%96%B2-black" alt="Powered by Vercel">
-    </picture>
-  </a>
-  <br />
-  <img src="https://github.com/nodejs/nodejs.org/actions/workflows/build.yml/badge.svg" alt="Build and Analysis Checks" />
-  <a title="scorecard" href="https://securityscorecards.dev/viewer/?uri=github.com/nodejs/nodejs.org">
-    <img src="https://api.securityscorecards.dev/projects/github.com/nodejs/nodejs.org/badge" alt="nodejs.org scorecard badge" />
-  </a>
-  <a href="http://commitizen.github.io/cz-cli/" alt="Commitizen friendly">
-    <img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg">
-  </a>
-  <br />
-  <br />
-</p>
+Virtual Machine 1 (Jenkins)
+Jenkins installed.
+Docker installed.
+Virtual Machine 2 (Minikube and ArgoCD)
+Minikube installed.
+kubectl installed.
+ArgoCD installed.
+Accounts
+GitHub Account: Ghobashy-Cloud
+Docker Hub Account: khaled55
+Part 1: Jenkins Setup and Dockerization
+Step 1: Fork the Repository
+Navigate to the Node.js GitHub repository.
+Click the "Fork" button to create a copy of the repository in Khaled's GitHub account.
+Step 2: Clone the Repository
+Clone the forked repository to the Jenkins VM:
 
-## What is this repo?
+bash
+Copy code
+git clone https://github.com/Ghobashy-Cloud/nodejs.org.git
+Step 3: Build and Run Unit Tests Locally
+Ensure that Node.js is installed on the VM. Install Node.js version 20 or higher:
 
-[Nodejs.org](https://nodejs.org/) by the [OpenJS Foundation](https://openjsf.org/) is the official website for the Node.js® JavaScript runtime. This repo is the source code for the website. It is built using [Next.js](https://nextjs.org), a React Framework.
+bash
+Copy code
+nvm install 20
+nvm use 20
+To build and test the application locally:
 
-```bash
-npm ci
-npx turbo dev
+bash
+Copy code
+npm install
+npm test
+Step 4: Create and Push the Dockerfile
+Create a Dockerfile for the Node.js application:
 
-# listening at localhost:3000
-```
+dockerfile
+Copy code
+# Use Node.js official image
+FROM node:20
 
-## Contributing
+# Set the working directory
+WORKDIR /usr/src/app
 
-This project adopts the Node.js [Code of Conduct][].
+# Copy package.json and install dependencies
+COPY package*.json ./
+RUN npm install
 
-Any person who wants to contribute to the Website is welcome! Please read [Contribution Guidelines][] and see the [Figma Design][] to understand better the structure of this repository.
+# Copy the application code
+COPY . .
 
-> \[!IMPORTANT]\
-> Please read our [Translation Guidelines][] before contributing to Translation and Localization of the Website
+# Expose the application port
+EXPOSE 8000
 
-> \[!NOTE]\
-> We recommend a read of all Relevant Links below before doing code changes; Including Dependency changes, Content changes, and Code changes.
+# Command to start the application
+CMD ["npm", "start"]
+Push this Dockerfile to Khaled's GitHub repository.
 
-### Deployment
+Step 5: Set Up Jenkins Pipeline
+Configure a multibranch pipeline in Jenkins to automate the following stages:
 
-The Website is automatically deployed to [Vercel](https://vercel.com) through its GitHub App integration when new pushes happen on the `main` branch.
+Checkout the repository: Pull the latest code from GitHub.
+Install dependencies: Use npm to install required packages.
+Run unit tests: Execute npm test to ensure the code passes all tests.
+Dockerize the application: Build the Docker image using the Dockerfile.
+Push Docker image: Push the Docker image to Khaled's Docker Hub account (khaled55/nodejs-app).
+Sample Jenkinsfile Structure:
+groovy
+Copy code
+pipeline {
+    agent any
 
-Details regarding the deployment are only accessible to the maintainers of the Website Team due to certain limitations.
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/Ghobashy-Cloud/nodejs.org.git'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Run Unit Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+        stage('Dockerize') {
+            steps {
+                sh 'docker build -t khaled55/nodejs-app .'
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'docker push khaled55/nodejs-app'
+                }
+            }
+        }
+    }
+}
+Part 2: Kubernetes Deployment
+Step 1: Set Up Minikube and ArgoCD
+On the second VM:
 
-The current integration is owned by the OpenJS Foundation and managed by the Website Team.
+Install Minikube.
+Install kubectl.
+Install ArgoCD.
+Step 2: Create Kubernetes Deployment YAML
+Create a deployment.yaml file for the Node.js application and push it to Khaled's GitHub repository:
 
-<details>
-  <summary>Legacy Deployment</summary>
+yaml
+Copy code
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodejs-app
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+    spec:
+      containers:
+      - name: nodejs-app
+        image: khaled55/nodejs-app:latest
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-app-service
+spec:
+  type: NodePort
+  ports:
+    - port: 8000
+      nodePort: 30007
+  selector:
+    app: nodejs-app
+    
+Step 3: Deploy with ArgoCD
+Add Khaled's GitHub repository as a Git source in ArgoCD.
+Create an ArgoCD application to manage the Node.js deployment.
+Sync ArgoCD to deploy the application to the Minikube cluster.
+Step 4: Verify the Deployment
+After deploying with ArgoCD, ensure that the application is running successfully:
 
-The full setup is in <https://github.com/nodejs/build/tree/master/ansible/www-standalone> minus secrets and certificates.
-
-The webhook is set up on GitHub for this project and talks to a small Node server on the host, which does the work. See the [github-webhook](https://github.com/rvagg/github-webhook) package for this.
-
-</details>
-
-## Node.js Binaries & API Docs
-
-This repository does not contain the codebase or related infrastructure that serves `https://nodejs.org/api/`, `https://nodejs.org/docs/` or `https://nodejs.org/dist/`.
-
-These are maintained in different repositories and we urge users to open **issues in their respective repositories**, for bug reports, feature requests or any matter related to these endpoints.
-
-- [`release-cloudflare-worker`](https://github.com/nodejs/release-cloudflare-worker): The codebase responsible for serving the Node.js Distribution Binaries, API Docs and any other assets from the links mentioned above.
-  - We use Cloudflare R2 Buckets for storing our Assets and Cloudflare Workers for serving these Assets to the Web.
-- [`node/doc/api`](https://github.com/nodejs/node/tree/main/doc/api): The source code of our API docs, it contains all the Node.js API Documentation Markdown files
-  - [`node/doc`](https://github.com/nodejs/node/tree/main/doc) contains the HTML templates, CSS styles and JavaScript code that runs on the client-side of our API Docs generated pages.
-  - [`node/tools/doc`](https://github.com/nodejs/node/tree/main/tools/doc) contains the tooling that validates, lints, builds and compiles our API Docs. Also responsible for generating what you see when accessing `https://nodejs.org/api/`.
-
-## Relevant Links
-
-[Code of Conduct][]
-
-[Contribution Guidelines][]
-
-[Collaborator Guide][]
-
-[Figma Design][]
-
-[Content vs Code][]
-
-[Dependency Pinning][]
-
-[Translation Guidelines][]
-
-## Thanks
-
-- Thanks to all contributors and collaborators that make this project possible.
-- Thanks to [Chromatic](https://www.chromatic.com/) for providing the visual testing platform that helps us review UI changes and catch visual regressions.
-- Thanks to [Vercel](https://www.vercel.com/) for providing the infrastructure that serves and powers the Node.js Website
-- Thanks to [Cloudflare](https://cloudflare.com) for providing the infrastructure that serves Node.js's Website, Node.js's CDN and more.
-  - A really warm thank you to Cloudflare as we would not be able to serve our community without their immense support.
-- Thanks to [Sentry](https://sentry.io/welcome/) for providing an open source license for their error reporting, monitoring and diagnostic tools.
-- Thanks to [Crowdin](https://crowdin.com/) for providing a platform that allows us to localize the Node.js Website and collaborate with translators.
-- Thanks to [Orama](https://docs.oramasearch.com/) for providing a search platform that indexes our expansive content and provides lightning-fast results for our users.
-
-[code of conduct]: https://github.com/nodejs/admin/blob/main/CODE_OF_CONDUCT.md
-[contribution guidelines]: https://github.com/nodejs/nodejs.org/blob/main/CONTRIBUTING.md
-[content vs code]: https://github.com/nodejs/nodejs.org/blob/main/CONTENT_VS_CODE.md
-[dependency pinning]: https://github.com/nodejs/nodejs.org/blob/main/DEPENDENCY_PINNING.md
-[collaborator guide]: https://github.com/nodejs/nodejs.org/blob/main/COLLABORATOR_GUIDE.md
-[figma design]: https://www.figma.com/file/pu1vZPqNIM7BePd6W8APA5/Node.js
-[translation guidelines]: https://github.com/nodejs/nodejs.org/blob/main/TRANSLATION.md
+Get the list of pods to check their status:
+bash
+Copy code
+kubectl get pods
+Access the application via the Minikube IP and the NodePort:
+Retrieve the Minikube IP:
+bash
+Copy code
+minikube ip
+Open a web browser and navigate to http://<MINIKUBE_IP>:30007. Khaled should see the Node.js application running.
+Conclusion
+This project illustrates a complete CI/CD pipeline for a Node.js application, encompassing building, testing, containerization, and deployment using Kubernetes and ArgoCD. The Jenkins pipeline automates these processes, ensuring that every new code change is tested, Dockerized, and deployed without manual intervention.
